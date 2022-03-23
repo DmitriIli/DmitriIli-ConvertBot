@@ -3,13 +3,16 @@ from telebot import types
 import requests
 import json
 import re
-from config import TOKEN, API_KEY
-base = 'USD'
-convert_into = 'RUB,USD'
+from config import TOKEN, API_KEY, base, convert_into
+from utils import InputError
+
+
 
 url = f'http://api.exchangeratesapi.io/v1/latest?access_key={API_KEY}&symbols={convert_into}&format=1'
 
-json_dict = json.loads(requests.get(url).content)
+r = requests.get(url)
+
+json_dict = json.loads(r.content)
 
 values = {
     'EUR': 1,
@@ -56,7 +59,7 @@ def start_message(message):
                     and str(amount).isdigit():
                 convert_into_EUR = amount / values[convert_from]
                 converted = convert_into_EUR * values[convert_into]
-                bot.send_message(message, text=f'{amount} {convert_from} = {converted:.2f} {convert_into}')
+                bot.send_message(message.chat.id, text=f'{amount} {convert_from} = {converted:.2f} {convert_into}')
             else:
                 raise InputError('/values')
         else:
