@@ -6,24 +6,14 @@ import re
 from config import TOKEN, API_KEY, base, convert_into
 from utils import InputError
 
-
-
 url = f'http://api.exchangeratesapi.io/v1/latest?access_key={API_KEY}&symbols={convert_into}&format=1'
-
 r = requests.get(url)
-
 json_dict = json.loads(r.content)
-
 values = {
-    'EUR': 1,
     'USD': float(json_dict['rates']['USD']),
-    'RUB': float(json_dict['rates']['RUB'])
+    'RUB': float(json_dict['rates']['RUB']),
+    'EUR': 1
 }
-
-
-class InputError(Exception):
-    pass
-
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -31,43 +21,51 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['start', 'help'])
 def start_message(message):
     bot.send_message(message.chat.id,
-                     'Бот для актуальной конвертации валют.\n <валюта, для конвертации> ,'
-                     '<валюта, в которую производится конвертация>, <количество конвертируемой валюты> \n '
+                     'Бот для актуальной конвертации валют.\n Ввести через пробел <валюта, для конвертации> '
+                     '<валюта, в которую производится конвертация> <количество конвертируемой валюты> \n '
                      '/values - для получения списка доступных валют')
 
 
 @bot.message_handler(commands=['values'])
 def start_message(message):
     bot.send_message(message.chat.id,
-                     text='Бот возвращает цену на определённое количество валюты (евро - EUR, доллар - USD или рубль - RUB).')
+                     text='евро - EUR \n доллар - USD \n рубль - RUB ')
 
 
 @bot.message_handler(content_types=['text'])
 def start_message(message):
-    pattern = '\w+\,\w+\,\d+'
-
+    message.text = re.sub(r'\s+', ' ', message.text).strip()
     try:
-        if re.search(pattern, message.text):
-            ls = message.text.split(',')
-            print(*ls)
+        message.text = re.sub(r'\s+', ' ', message.text).strip()
+        ls = message.text.split(' ')
+        if len(ls) != 3:
+            raise InputError('повторите ввод')
+        else:
             convert_from = ls[0]
             convert_into = ls[1]
-            amount = int(ls[2])
+            convert_from_upper = str(convert_from).upper().strip()
+            convert_into_upper = str(convert_into).upper().strip()
 
-            if convert_from in ('USD', 'RUB', 'EUR') and convert_into in (
-                    'USD', 'RUB', 'EUR') and convert_into != convert_from \
-                    and str(amount).isdigit():
-                convert_into_EUR = amount / values[convert_from]
-                converted = convert_into_EUR * values[convert_into]
-                bot.send_message(message.chat.id, text=f'{amount} {convert_from} = {converted:.2f} {convert_into}')
-            else:
-                raise InputError('/values')
+        if str(ls[2]).isdigit():
+            amount = float(ls[2])
         else:
-            raise InputError(
-                'формат ввода:<валюта для конветации>,<валюта,в которую будет производиться конвертация>,<количество '
-                'конвертируемой валюты>')
+            raise InputError('количесвто должно быть число')
+
+        if amount < 0:
+            raise InputError('количество должно быть больше 0')
+
+        if convert_from_upper in ('USD', 'RUB', 'EUR') and convert_into_upper in (
+                'USD', 'RUB', 'EUR'):
+
+            convert_into_EUR = amount / values[convert_from_upper]
+            converted = convert_into_EUR * values[convert_into_upper]
+            bot.send_message(message.chat.id,
+                             text=f'{amount} {convert_from_upper} = {converted:.2f} {convert_into_upper}')
+        else:
+            raise InputError('не корректный ввод.\n USD,EUR,RUB')
+
     except InputError as e:
-        bot.reply_to(message, text=f'{e}')
+        bot.reply_to(message, text=f'{e.__str__()}')
 
 
 bot.polling(non_stop=True)
