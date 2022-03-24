@@ -49,7 +49,7 @@ def start_message(message):
         if str(ls[2]).isdigit():
             amount = float(ls[2])
         else:
-            raise InputError('количесвто должно быть число')
+            raise InputError('количество должно быть число')
 
         if amount < 0:
             raise InputError('количество должно быть больше 0')
